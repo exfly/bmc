@@ -44,7 +44,7 @@ func execCmd(ctx context.Context, bin string, args ...string) (string, error) {
 func execCmdInteract(ctx context.Context, dir string, bin string, args ...string) error {
 	envs := os.Environ()
 
-	log.Println(envs)
+	log.Println("env", envs)
 
 	debug := debug.Init("exec_cmd")
 

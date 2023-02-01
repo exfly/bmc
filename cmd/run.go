@@ -23,6 +23,16 @@ type Manifest struct {
 	Layers   []string `json:"Layers"`
 }
 
+type ManifestConfig struct {
+	Architecture string `json:"architecture"`
+	Config       struct {
+		Env        []string    `json:"Env"`
+		Cmd        []string    `json:"Cmd"`
+		WorkingDir string      `json:"WorkingDir"`
+		OnBuild    interface{} `json:"OnBuild"`
+	} `json:"config"`
+}
+
 var tar = archiver.Tar{
 	OverwriteExisting: true,
 	MkdirAll:          true,
@@ -68,20 +78,7 @@ to quickly create a Cobra application.`,
 				return errors.Wrap(err, "")
 			}
 
-			err = prepareRootfs(ctx, fromDir, toDir)
-			if err != nil {
-				return errors.Wrap(err, "")
-			}
-		}
-
-		configPath := filepath.Join(baseDir, "config.json")
-		// STEP: prepare runc container spec
-		if !fileExists(configPath) {
-			config, err := bmc.BinDataFs.ReadFile("config.json")
-			if err != nil {
-				return errors.Wrap(err, "")
-			}
-			err = ioutil.WriteFile(configPath, config, 0664)
+			err = prepareRootfs(ctx, baseDir, fromDir, toDir)
 			if err != nil {
 				return errors.Wrap(err, "")
 			}
@@ -118,8 +115,9 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func prepareRootfs(ctx context.Context, fromDir, toDir string) error {
+func prepareRootfs(ctx context.Context, baseDir, fromDir, toDir string) error {
 	manifestFile := "manifest.json"
+	manifestConfig := make([]string, 0, 10)
 
 	// STEP: 解压 layer
 	content, err := ioutil.ReadFile(filepath.Join(fromDir, manifestFile))
@@ -133,6 +131,8 @@ func prepareRootfs(ctx context.Context, fromDir, toDir string) error {
 	}
 
 	for _, manifest := range manifests {
+		manifestConfig = append(manifestConfig, manifest.Config)
+
 		for _, layer := range manifest.Layers {
 			log.Printf("untar file %v -> %v", layer, toDir)
 			err = tar.Unarchive(filepath.Join(fromDir, layer), toDir)
@@ -148,6 +148,45 @@ func prepareRootfs(ctx context.Context, fromDir, toDir string) error {
 		return errors.Wrap(err, "")
 	}
 	err = CopyFile(filepath.Join(toDir, "/etc/hosts"), "/etc/hosts")
+	if err != nil {
+		return errors.Wrap(err, "")
+	}
+
+	// STEP: prepare runc container spec
+	envs := make([]string, 0, 10)
+	for _, c := range manifestConfig {
+		content, err := ioutil.ReadFile(filepath.Join(fromDir, c))
+		if err != nil {
+			return errors.Wrap(err, "")
+		}
+		var config ManifestConfig
+		err = json.Unmarshal(content, &config)
+		if err != nil {
+			return errors.Wrap(err, "")
+		}
+
+		envs = append(envs, config.Config.Env...)
+	}
+
+	config, err := bmc.BinDataFs.ReadFile("config.json")
+	if err != nil {
+		return errors.Wrap(err, "")
+	}
+	var newConfig map[string]interface{}
+	err = json.Unmarshal(config, &newConfig)
+	if err != nil {
+		return errors.Wrap(err, "unmarshal config.json template failed")
+	}
+
+	newConfig["process"].(map[string]interface{})["env"] = envs
+
+	updatedConfig, err := json.Marshal(newConfig)
+	if err != nil {
+		return errors.Wrap(err, "")
+	}
+
+	configPath := filepath.Join(baseDir, "config.json")
+	err = ioutil.WriteFile(configPath, updatedConfig, 0664)
 	if err != nil {
 		return errors.Wrap(err, "")
 	}

@@ -23,7 +23,7 @@ curl --output bin/runc --location https://github.com/opencontainers/runc/release
 make build
 docker save -o alpine.tar alpine:edge
 
-PATH=/vagrant/bin:$PATH /vagrant/bin/bmc-Linux run -f /vagrant/tmp/runtime.tar -t .
+/vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar
 ```
 
 ## deps
@@ -36,4 +36,4 @@ curl --output bin/runc.amd64 --location https://github.com/opencontainers/runc/r
 ## TODO
 
 - [x] 运行起程序
-- [ ] 
+- [x] 支持加载环境变量

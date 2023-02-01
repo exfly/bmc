@@ -1,14 +1,21 @@
 # syntax=docker/dockerfile:1
 # docker.io/docker/dockerfile:1
 
+# docker build -t tmp:dev -f Dockerfile.example . && docker save -o tmp/tmp.tar tmp:dev
+
 FROM alpine:edge AS build
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
 WORKDIR /app
 
+ENV VERSION2 ${VERSION}
+
 RUN apk add --no-cache skopeo tini
 
-RUN apk add --no-cache helm kubectl --repository=http://mirrors.aliyun.com/alpine/edge/testing/
+RUN apk add --no-cache helm kubectl --repository=http://mirrors.tuna.tsinghua.edu.cn/alpine/edge/testing/
 
 ENV VERSION ${VERSION}
+
+RUN touch hello.txt
+RUN mv hello.txt hello.txt.new
