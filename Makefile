@@ -30,4 +30,4 @@ release:
 .PHONY: builddemoimg
 builddemoimg:
 	docker build --squash -t tmp:dev -f Dockerfile.example . && docker save -o tmp/tmp.tar tmp:dev
-	#Then run in vm: /vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar 
+	#Then run in vm: /vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar
