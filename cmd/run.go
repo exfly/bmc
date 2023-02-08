@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/exfly/bmc"
 	"github.com/mholt/archiver/v3"
@@ -44,6 +45,7 @@ var (
 	runRootfs      bool
 	runContainerID string
 	runConfig      string
+	runRawCmd      string
 )
 
 // runCmd represents the run command
@@ -66,11 +68,7 @@ to quickly create a Cobra application.`,
 		// STEP: untar docker image
 		if runRootfs {
 			log.Println("build rootfs")
-			err := os.RemoveAll(toDir)
-			if err != nil {
-				log.Printf("remove dir %v failed %v", toDir, err)
-			}
-			err = tar.Unarchive(
+			err := tar.Unarchive(
 				runFromTar,
 				fromDir,
 			)
@@ -78,7 +76,7 @@ to quickly create a Cobra application.`,
 				return errors.Wrap(err, "")
 			}
 
-			err = prepareRootfs(ctx, baseDir, fromDir, toDir)
+			err = prepareRootfs(ctx, baseDir, fromDir, toDir, strings.Split(runRawCmd, " "))
 			if err != nil {
 				return errors.Wrap(err, "")
 			}
@@ -115,7 +113,7 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func prepareRootfs(ctx context.Context, baseDir, fromDir, toDir string) error {
+func prepareRootfs(ctx context.Context, baseDir, fromDir, toDir string, firstCmd []string) error {
 	manifestFile := "manifest.json"
 	manifestConfig := make([]string, 0, 10)
 
@@ -179,6 +177,7 @@ func prepareRootfs(ctx context.Context, baseDir, fromDir, toDir string) error {
 	}
 
 	newConfig["process"].(map[string]interface{})["env"] = envs
+	newConfig["process"].(map[string]interface{})["args"] = firstCmd
 
 	updatedConfig, err := json.Marshal(newConfig)
 	if err != nil {
@@ -211,6 +210,7 @@ func init() {
 	flags.BoolVarP(&runRootfs, "build-rootfs", "", false, "build rootfs")
 	flags.StringVarP(&runContainerID, "container-id", "", "bmc-container-id", "container id")
 	flags.StringVarP(&runConfig, "config", "", "config.json", "runc container spec config")
+	flags.StringVarP(&runRawCmd, "cmd", "", "sh", "container first cmd")
 }
 
 func CopyFile(dest, src string) error {
