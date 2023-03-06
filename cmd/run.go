@@ -46,6 +46,7 @@ var (
 	runContainerID string
 	runConfig      string
 	runRawCmd      string
+	runTerminal    bool
 )
 
 // runCmd represents the run command
@@ -76,7 +77,7 @@ to quickly create a Cobra application.`,
 				return errors.Wrap(err, "")
 			}
 
-			err = prepareRootfs(ctx, baseDir, fromDir, toDir, strings.Split(runRawCmd, " "))
+			err = prepareRootfs(ctx, runTerminal, baseDir, fromDir, toDir, strings.Split(runRawCmd, " "))
 			if err != nil {
 				return errors.Wrap(err, "")
 			}
@@ -113,7 +114,7 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func prepareRootfs(ctx context.Context, baseDir, fromDir, toDir string, firstCmd []string) error {
+func prepareRootfs(ctx context.Context, terminal bool, baseDir, fromDir, toDir string, firstCmd []string) error {
 	manifestFile := "manifest.json"
 	manifestConfig := make([]string, 0, 10)
 
@@ -178,6 +179,7 @@ func prepareRootfs(ctx context.Context, baseDir, fromDir, toDir string, firstCmd
 
 	newConfig["process"].(map[string]interface{})["env"] = envs
 	newConfig["process"].(map[string]interface{})["args"] = firstCmd
+	newConfig["process"].(map[string]interface{})["terminal"] = terminal
 
 	updatedConfig, err := json.Marshal(newConfig)
 	if err != nil {
@@ -211,6 +213,7 @@ func init() {
 	flags.StringVarP(&runContainerID, "container-id", "", "bmc-container-id", "container id")
 	flags.StringVarP(&runConfig, "config", "", "config.json", "runc container spec config")
 	flags.StringVarP(&runRawCmd, "cmd", "", "sh", "container first cmd")
+	flags.BoolVarP(&runTerminal, "terminal", "", false, "open terminal")
 }
 
 func CopyFile(dest, src string) error {
