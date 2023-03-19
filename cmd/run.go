@@ -13,7 +13,9 @@ import (
 	"strings"
 
 	"github.com/exfly/bmc"
+
 	"github.com/mholt/archiver/v3"
+	spec "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -47,6 +49,7 @@ var (
 	runConfig      string
 	runRawCmd      string
 	runTerminal    bool
+	runMounts      []string
 )
 
 // runCmd represents the run command
@@ -77,7 +80,18 @@ to quickly create a Cobra application.`,
 				return errors.Wrap(err, "")
 			}
 
-			err = prepareRootfs(ctx, runTerminal, baseDir, fromDir, toDir, strings.Split(runRawCmd, " "))
+			opts := Opts{}
+
+			for _, rawMount := range runMounts {
+				mount, err := stringToMount(rawMount)
+				if err != nil {
+					return errors.Wrap(err, "")
+				}
+
+				opts.Mounts = append(opts.Mounts, mount)
+			}
+
+			err = prepareRootfs(ctx, runTerminal, baseDir, fromDir, toDir, strings.Split(runRawCmd, " "), opts)
 			if err != nil {
 				return errors.Wrap(err, "")
 			}
@@ -114,7 +128,49 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func prepareRootfs(ctx context.Context, terminal bool, baseDir, fromDir, toDir string, firstCmd []string) error {
+type Opts struct {
+	Mounts []spec.Mount `json:"mounts,omitempty"`
+}
+
+func toMap(in interface{}) (out map[string]interface{}, err error) {
+	raw, err := json.Marshal(in)
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+
+	err = json.Unmarshal(raw, &out)
+
+	return out, errors.Wrap(err, "")
+}
+
+// type=bind,source="$(pwd)"/target,target=/app
+func stringToMount(s string) (ret spec.Mount, err error) {
+	for _, one := range strings.Split(s, ",") {
+		args := strings.Split(one, "=")
+		key := args[0]
+		val := args[1]
+		switch key {
+		case "destination", "dst", "target":
+			ret.Destination = val
+		case "source", "src":
+			ret.Source = val
+		case "type":
+			if val != "bind" {
+				ret.Type = val
+			}
+		}
+	}
+
+	ret.Options = []string{"rbind", "rw"}
+
+	if len(ret.Type) == 0 {
+		ret.Type = "none"
+	}
+
+	return
+}
+
+func prepareRootfs(ctx context.Context, terminal bool, baseDir, fromDir, toDir string, firstCmd []string, opts Opts) error {
 	manifestFile := "manifest.json"
 	manifestConfig := make([]string, 0, 10)
 
@@ -181,6 +237,14 @@ func prepareRootfs(ctx context.Context, terminal bool, baseDir, fromDir, toDir s
 	newConfig["process"].(map[string]interface{})["args"] = firstCmd
 	newConfig["process"].(map[string]interface{})["terminal"] = terminal
 
+	for _, one := range opts.Mounts {
+		mount, err := toMap(one)
+		if err != nil {
+			return errors.Wrapf(err, "%v", one)
+		}
+		newConfig["mounts"] = append(newConfig["mounts"].([]interface{}), mount)
+	}
+
 	updatedConfig, err := json.Marshal(newConfig)
 	if err != nil {
 		return errors.Wrap(err, "")
@@ -214,6 +278,7 @@ func init() {
 	flags.StringVarP(&runConfig, "config", "", "config.json", "runc container spec config")
 	flags.StringVarP(&runRawCmd, "cmd", "", "sh", "container first cmd")
 	flags.BoolVarP(&runTerminal, "terminal", "", false, "open terminal")
+	flags.StringArrayVarP(&runMounts, "mount", "", []string{}, "bind mount host container")
 }
 
 func CopyFile(dest, src string) error {

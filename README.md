@@ -23,7 +23,7 @@ curl --output bin/runc --location https://github.com/opencontainers/runc/release
 make build
 docker save -o alpine.tar alpine:edge
 
-/vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar
+/vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar --mount "type=bind,source=$(pwd)/snap,target=/host"
 ```
 
 ## deps
@@ -37,3 +37,8 @@ curl --output bin/runc.amd64 --location https://github.com/opencontainers/runc/r
 
 - [x] 运行起程序
 - [x] 支持加载环境变量
+- [x] bind mount 数据目录
+- [ ] CI
+- [ ] arm64 支持
+- [ ] 使用 github.com/opencontainers/runtime-spec/specs-go 重构 spec 解析
+- [ ] 使用 https://0xcf9.org/2021/06/22/embed-and-execute-from-memory-with-golang/ 重构 runc 执行
