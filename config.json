@@ -30,12 +30,6 @@
 	"hostname": "bmc",
 	"mounts": [
 		{
-			"destination": "/host/",
-			"type": "none",
-			"source": "./",
-			"options": ["rbind","rw"]
-		},
-		{
 			"destination": "/proc",
 			"type": "proc",
 			"source": "proc"
