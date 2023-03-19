@@ -31,3 +31,7 @@ release:
 builddemoimg:
 	docker build --squash -t tmp:dev -f Dockerfile.example . && docker save -o tmp/tmp.tar tmp:dev
 	#Then run in vm: /vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar
+
+.PHONY: earthfile
+earthfile:
+	docker run -t -v ${PWD}:/workspace -v /var/run/docker.sock:/var/run/docker.sock -e NO_BUILDKIT=1 earthly/earthly:v0.7.2 +build-all-platforms
