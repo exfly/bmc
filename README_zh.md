@@ -1,3 +1,5 @@
+<img src="logo.svg" alt="BMC logo" width="360px" />
+
 # BMC
 
 [bmc](https://github.com/exfly/bmc) 是基于 runc 的轻量级容器运行时环境。它允许您在不使用 dockerd 的情况下以 tar 格式运行 Docker 镜像。该项目的主要目标是为离线软件安装和运行提供便利，满足开发和运维的需求。

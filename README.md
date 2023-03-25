@@ -1,3 +1,5 @@
+<img src="logo.svg" alt="BMC logo" width="360px" />
+
 # BMC
 
 [bmc](https://github.com/exfly/bmc) is a lightweight container runtime environment based on runc. It allows you to run Docker images in tar format without using dockerd. The main goal of this project is to provide convenience for offline software installation and runtime, serving the needs of both development and operations.
