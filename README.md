@@ -1,44 +1,40 @@
-# bmc
+# BMC
 
-BareMetalContainer: running containers without a daemon
+[bmc](https://github.com/exfly/bmc) is a lightweight container runtime environment based on runc. It allows you to run Docker images in tar format without using dockerd. The main goal of this project is to provide convenience for offline software installation and runtime, serving the needs of both development and operations.
 
-## Overview
+## Features
 
-docker 容器在我们的开发运维过程中提供了很大的便利:
-1. 可以使用 docker 配合 docker-compose 搭建开发环境，保证开发环境与生产环境一致
-2. 运维中，docker 容器运行在 k8s 中，容器可以伸缩，提高服务吞吐
-3. docker 容器使用资源少，镜像轻量
+- Runs Docker images in tar format without using dockerd.
+- Supports custom environment variables and data directories.
+- Based on Docker and Linux namespace, it doesn't require strict network isolation.
+- Lightweight images and small runtime environment, with advantages in resource consumption and image size.
 
-运维过程中，使用 ansible 安装 docker、k8s 集群。安装过程纯离线，所以需要将所有的依赖做离线处理。而 ansible 运行环境依赖与 python 以及一些 python 包。从前我们的方法是，将安装包装到 docker 容器中。部署的时候，申请两台机器，一台用做部署机，一台用于生产。部署完后，部署机回收。使用体验偏差。
+## Usage
 
-docker 提供的运行时灵活，无束缚，如果将当前的 docker 完全迁移，我们需要做更多的工作在适配不同的运行环境。而 docker 运行时又是 ansible 装起来的，一个鸡生蛋还蛋蛋生鸡的问题。
+1. Install dependencies: https://github.com/exfly/bmc/releases
+2. `mv bmc-* /bin/bmc && chmod +x /bin/bmc`
+3. `docker save -o dockerimg.tar alpine:edge`
+3. `bmc run --build-rootfs -f /path/to/dockerimg.tar --mount "type=bind,source=$(pwd)/snap,target=/host"`
 
-基于对 docker 和 linux namespace 的理解，可以将 docker daemon 舍弃掉，选择一种更清量的方式启动一个 container。container不需要严格的网络隔离。
+## Build
 
-## Usages
+1. Install dependencies: [earthly](https://earthly.dev/get-earthly) [docker](https://docs.docker.com/desktop/install/mac-install/)
+2. `make earthfile`
 
-```
-vagrant up
-curl --output bin/runc --location https://github.com/opencontainers/runc/releases/download/v1.1.3/runc.amd64
-make build
-docker save -o alpine.tar alpine:edge
+## TODO List
 
-/vagrant/bin/bmc-Linux run --build-rootfs -f /vagrant/tmp/tmp.tar --mount "type=bind,source=$(pwd)/snap,target=/host"
-```
+- [x] Implement program features.
+- [x] Support loading custom environment variables.
+- [x] support bind mount data directory.
+- [x] Support CI testing.
+- [x] Support arm64.
+- [ ] Refactor spec parsing using https://github.com/opencontainers/runtime-spec/specs-go.
+- [ ] Refactor runc execution using https://0xcf9.org/2021/06/22/embed-and-execute-from-memory-with-golang/.
 
-## deps
+## Contributing
 
-```
-https://github.com/opencontainers/runc/releases/tag/v1.1.3
-curl --output bin/runc.amd64 --location https://github.com/opencontainers/runc/releases/download/v1.1.3/runc.amd64
-```
+Contributions are welcome through pull requests or issues. If you find a bug, please open a new issue. If you want to add new features or fix issues, please fork the project and submit a pull request.
 
-## TODO
+## License
 
-- [x] 运行起程序
-- [x] 支持加载环境变量
-- [x] bind mount 数据目录
-- [x] CI
-- [x] arm64 支持
-- [ ] 使用 github.com/opencontainers/runtime-spec/specs-go 重构 spec 解析
-- [ ] 使用 https://0xcf9.org/2021/06/22/embed-and-execute-from-memory-with-golang/ 重构 runc 执行
+This project is licensed under the Apache License. See the [LICENSE](LICENSE) file for details.
